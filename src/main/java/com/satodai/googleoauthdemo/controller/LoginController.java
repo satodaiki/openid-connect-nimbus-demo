@@ -42,7 +42,7 @@ public class LoginController {
     @PostMapping("oauth2/login")
     public String postLogin() {
 
-        AuthenticationRequest authenticationRequest = openIdConnectService.makeRequest();
+        AuthenticationRequest authenticationRequest = openIdConnectService.makeAuthenticationRequest();
 
         // StateとNonceをセッションに保存
         session.setState(authenticationRequest.getState());
@@ -62,7 +62,13 @@ public class LoginController {
 
         TokenResponse tokenResponse = openIdConnectService.doTokenReqest(code.get());
 
-        // IDトークンの検証とかあるけど全部省略
+        // IDトークンの検証
+        boolean idTokenVerifyResult = openIdConnectService.verifyTokenResponse(tokenResponse, session.getNonce());
+
+        if (!idTokenVerifyResult) {
+            return "{\"error\":\"state-dame-desu\"}";
+        }
+
         BearerAccessToken token = tokenResponse.toSuccessResponse()
                 .getTokens()
                 .getBearerAccessToken();

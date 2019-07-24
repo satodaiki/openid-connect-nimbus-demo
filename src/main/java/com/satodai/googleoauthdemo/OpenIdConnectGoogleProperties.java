@@ -13,6 +13,8 @@ public class OpenIdConnectGoogleProperties {
 
     private String clientSecret;
 
+    private String scope;
+
     private String authorizationUrl;
 
     private String tokenUrl;
@@ -20,4 +22,6 @@ public class OpenIdConnectGoogleProperties {
     private String userinfoUrl;
 
     private String redirectUrl;
+
+    private String jwksUrl;
 }
