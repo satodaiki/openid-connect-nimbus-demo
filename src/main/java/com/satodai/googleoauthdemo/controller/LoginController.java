@@ -1,22 +1,30 @@
 package com.satodai.googleoauthdemo.controller;
 
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.satodai.googleoauthdemo.domain.service.OpenIdConnectService;
+import com.satodai.googleoauthdemo.entity.session.OpenIdConnectSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.UrlBasedViewResolver;
+import org.thymeleaf.util.StringUtils;
+
+import java.util.Optional;
 
 @Controller
 public class LoginController {
 
     @Autowired
     private OpenIdConnectService openIdConnectService;
+
+    /** セッション */
+    @Autowired
+    OpenIdConnectSession session;
 
     /**
      * ログイン画面を表示
@@ -34,18 +42,25 @@ public class LoginController {
     @PostMapping("oauth2/login")
     public String postLogin() {
 
-        AuthorizationRequest authorizationRequest = openIdConnectService.makeRequest();
+        AuthenticationRequest authenticationRequest = openIdConnectService.makeRequest();
 
-        return UrlBasedViewResolver.REDIRECT_URL_PREFIX + authorizationRequest.toURI().toString();
+        // StateとNonceをセッションに保存
+        session.setState(authenticationRequest.getState());
+        session.setNonce(authenticationRequest.getNonce());
+
+        return UrlBasedViewResolver.REDIRECT_URL_PREFIX + authenticationRequest.toURI().toString();
     }
 
     @GetMapping(value = "oauth2/redirect", params = {"state", "code"})
     @ResponseBody
-    public String getRedirect(String state, String code) {
+    public String getRedirect(Optional<String> state, Optional<String> code) {
 
-        // ここに本来ならstate検証がある
+        // stateの検証
+        if (!StringUtils.equals(state.get(), session.getState().getValue())) {
+            return "{\"error\":\"state-dame-desu\"}";
+        }
 
-        TokenResponse tokenResponse = openIdConnectService.doTokenReqest(code);
+        TokenResponse tokenResponse = openIdConnectService.doTokenReqest(code.get());
 
         // IDトークンの検証とかあるけど全部省略
         BearerAccessToken token = tokenResponse.toSuccessResponse()
